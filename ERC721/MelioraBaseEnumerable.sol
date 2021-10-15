@@ -11,8 +11,8 @@ contract MelioraBaseEnumerable is ERC721, ERC721Enumerable, ERC721URIStorage, Pa
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     
-    string public tokenURIPrefix = "https://google.store.com/erc/721/meliora/";
-    string public tokenURISuffix = "meliora.json";
+    string public tokenURIPrefix = "https://storage.googleapis.com/meli-games/";
+    string public tokenURISuffix = "/meliora.json";
 
     constructor() ERC721("Meliora", "MELIORA") {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -62,13 +62,12 @@ contract MelioraBaseEnumerable is ERC721, ERC721Enumerable, ERC721URIStorage, Pa
 
     function safeMint(address to, uint256 tokenId) internal {
         _safeMint(to, tokenId);
-        _setTokenURI(tokenId,caluteTokenURI(tokenId,0));
+        _setTokenURI(tokenId,caluteTokenURI(tokenId));
     }
     
-    function caluteTokenURI (uint256 _tokenId,uint8 _star) internal view returns(string memory){
+    function caluteTokenURI (uint256 _tokenId) internal view returns(string memory){
         string memory tokenId = uint2str(_tokenId);
-        string memory star = uint2str(_star);
-        string memory uri = append(tokenId,star);
+        string memory uri = append(tokenId);
         return uri;
     }
     
@@ -92,8 +91,8 @@ contract MelioraBaseEnumerable is ERC721, ERC721Enumerable, ERC721URIStorage, Pa
       str = string(bstr);
     }
   
-    function append(string memory tokenId, string memory star) internal view returns (string memory) {
-        return string(abi.encodePacked(tokenURIPrefix,tokenId,"/",star,"/",tokenURISuffix));
+    function append(string memory tokenId) internal view returns (string memory) {
+        return string(abi.encodePacked(tokenURIPrefix,tokenId,tokenURISuffix));
     }
   
 }

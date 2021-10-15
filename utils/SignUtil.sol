@@ -1,13 +1,9 @@
 
-pragma solidity =0.8.0;
+pragma solidity ^0.8.0;
 
 abstract contract SignUtil{
     
     address internal publicKey = 0x2E3Eeb98a73909c5D07EA51DF72bFd1a263CC693;
-    
-    mapping(uint256=>bool) internal withdrawNonce;
-    
-     // Signature methods
 
     function splitSignature(bytes memory sig) 
         internal  

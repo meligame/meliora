@@ -1,10 +1,11 @@
-pragma solidity =0.8.0;
+pragma solidity ^0.8.0;
 
 interface MelioraCommonSpace {
 
     struct Meliora {
         uint8 star;
         uint8 breedCount;
+        uint256 unLockTime;
     }
     
     function getMeliora(uint256 tokenId) external returns(uint8 star,uint8 breedCount);
@@ -13,11 +14,10 @@ interface MelioraCommonSpace {
 
     function ownerOf(uint256 tokenId) external view returns(address);
 
-    function birthMeliora(address owner,uint256 fatherTokenId,uint256 momTokenId,uint256 tokenId) external;
+    function birthMeliora(address owner,uint256 fatherTokenId,uint256 momTokenId,uint256 tokenId,uint256 unLockTime) external;
 
     function upGradeMeliora (uint256 upTokenId,uint8 star,uint256 burnTokenId) external;
     
     function reloadMeliora (uint256 tokenId) external;
-    
     
 }
