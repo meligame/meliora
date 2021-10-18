@@ -187,15 +187,14 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
     /// @param _tokenId - ID of token to bid on.
     function bid(
         address _nftAddress,
-        uint256 _tokenId,
-        uint256 payAmount
+        uint256 _tokenId
     )
     external
     payable
     whenNotPaused
     {
     // _bid will throw if the bid or funds transfer fails
-        _bid(_nftAddress,_tokenId, payAmount);
+        _bid(_nftAddress,_tokenId);
         _transfer(_nftAddress, msg.sender, _tokenId);
     }
     
@@ -383,8 +382,7 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
     /// Does NOT transfer ownership of token.
     function _bid(
         address _nftAddress,
-        uint256 _tokenId,
-        uint256 _bidAmount
+        uint256 _tokenId
     )
     internal
     returns (uint256)
@@ -392,7 +390,6 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
         Auction memory _auction = auctions[_nftAddress][_tokenId];
         require(_isOnAuction(_auction));
         uint256 _price = _getCurrentPrice(_auction);
-        require(_bidAmount >= _price);
         address payable _seller = _auction.seller;
         _removeAuction(_nftAddress, _tokenId);
         if (_price > 0) {
