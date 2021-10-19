@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity =0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,18 +17,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract HasNoEther is Ownable {
 
   /**
-  * @dev Constructor that rejects incoming Ether
-  * @dev The `payable` flag is added so we can access `msg.value` without compiler warning. If we
-  * leave out payable, then Solidity will allow inheriting contracts to implement a payable
-  * constructor. By doing it this way we prevent a payable constructor from working. Alternatively
-  * we could use assembly to access msg.value.
-  */
-  constructor() payable {
-    require(msg.value == 0);
-  }
-
-
-  /**
    * @dev Transfer all Ether held by the contract to the owner.
    */
   function reclaimEther(address ) external onlyOwner {
@@ -37,6 +25,7 @@ contract HasNoEther is Ownable {
   }
   
   function reclaimToken(address tokenAddress) external onlyOwner {
+     require(tokenAddress != address(0),'tokenAddress can not a Zero address');
      IERC20 token = IERC20(tokenAddress);
      address _owner  = owner();
      token.transfer(_owner,token.balanceOf(address(this)));

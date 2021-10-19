@@ -1,4 +1,5 @@
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: MIT
+pragma solidity =0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -30,10 +31,10 @@ contract MelioraCore is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnab
         _setupRole(PAUSER_ROLE, msg.sender);
     }
     
-    //event MelioraUpGrade(uint256 indexed upId,uint256 burnId,uint8 currentStar);
+    event MelioraBirth(address indexed owner,uint256 fatherId,uint256 motherId,uint256 indexed tokenId,uint256 birth,uint256 rebirth);
     
-    //event MelioraBirth(address indexed owner,uint256 tokenId,uint256 fatherTokenId,uint256 momTokenId);
-    
+    event MelioraUpGrade(uint256 upId,uint256 burnId,uint8 currentStar);
+     
     
     modifier checkVoidMeliora{
         require(canCreateVoidMeliora,'can not create void meliora');
@@ -44,6 +45,25 @@ contract MelioraCore is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnab
         require(transferAllow ||
         hasRole(MANAGER_ROLE,account) ,'can not transfer');
         _;
+    }
+    
+    modifier checkContract(address sender){
+        require(isContract(sender) ,'caller is not a manager contract');
+        _;
+    }
+    
+    function isContract(address addr) internal view returns (bool) {
+       uint size;
+       assembly { size := extcodesize(addr) }
+       return size > 0;
+    }
+    
+    function setTokenURIPrefix(string memory _tokenURIPrefix)external onlyRole(DEFAULT_ADMIN_ROLE){
+        tokenURIPrefix = _tokenURIPrefix;
+    }
+    
+    function setTokenURISuffix(string memory _tokenURISuffix)external onlyRole(DEFAULT_ADMIN_ROLE){
+        tokenURISuffix = _tokenURISuffix;
     }
 
     function pause() external onlyRole(PAUSER_ROLE) {
@@ -66,8 +86,9 @@ contract MelioraCore is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnab
         _birthMeliora(owner,tokenId);
     }
     
-    function birthMeliora( address owner,uint tokenId)  external  onlyRole(MANAGER_ROLE){
+    function birthMeliora(address owner,uint fatherId,uint motherId,uint tokenId,uint birth,uint rebirth)  external checkContract(msg.sender)  onlyRole(MANAGER_ROLE){
         _birthMeliora(owner,tokenId);
+        emit MelioraBirth(owner,fatherId,motherId,tokenId,birth,rebirth);
     }
     
     function _birthMeliora(address owner,uint tokenId) internal{
@@ -79,8 +100,8 @@ contract MelioraCore is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnab
     function upGradeMeliora(uint256 upTokenId,uint256 burnId,uint8 star) external onlyRole(MANAGER_ROLE) {
         _setTokenURI(upTokenId,caluteTokenURI(upTokenId,star));
         _burn(burnId);
+        emit MelioraUpGrade(upTokenId,burnId,star);
     }
-    
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal

@@ -1,5 +1,5 @@
-
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: MIT
+pragma solidity =0.8.0;
 
 
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -76,7 +76,7 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
     /// @param _ownerCut - percent cut the owner takes on each auction, must be
     ///  between 0-10,000.
     constructor(uint256 _ownerCut) {
-        require(_ownerCut <= 10000);
+        require(_ownerCut <= 10000,'_ownerCut was error');
         ownerCut = _ownerCut;
     }
     
@@ -85,12 +85,12 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
     // Modifiers to check that inputs can be safely stored with a certain
     // number of bits. We use constants and multiple modifiers to save gas.
     modifier canBeStoredWith64Bits(uint256 _value) {
-        require(_value <= 18446744073709551615);
+        require(_value <= 18446744073709551615,'value is error');
         _;
     }
 
     modifier canBeStoredWith128Bits(uint256 _value) {
-        require(_value < 340282366920938463463374607431768211455);
+        require(_value < 340282366920938463463374607431768211455,'value is error');
         _;
     }
   
@@ -112,8 +112,9 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
         uint256 startedAt
     )
     {
+        require(_nftAddress != address(0),'nftAddress can not is a Zero address');
         Auction memory _auction = auctions[_nftAddress][_tokenId];
-        require(_isOnAuction(_auction));
+        require(_isOnAuction(_auction),'this auction has been bided');
         return (
             _auction.seller,
             _auction.startingPrice,
@@ -135,7 +136,7 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
     returns (uint256)
     {
         Auction memory _auction = auctions[_nftAddress][_tokenId];
-        require(_isOnAuction(_auction));
+        require(_isOnAuction(_auction),'this auction has been bided');
         return _getCurrentPrice(_auction);
     }
     
@@ -161,9 +162,10 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
     canBeStoredWith64Bits(_duration)
     {
         address _seller = msg.sender;
+        require(_nftAddress != address(0),'nftAddress is a Zero address');
         require(_startingPrice>0&&_endingPrice>0,'price error');
-        require(_owns(_nftAddress, _seller, _tokenId));
-        require(_duration >= 1 minutes);
+        require(_owns(_nftAddress, _seller, _tokenId),'caller is not owner');
+        require(_duration >= 1 minutes,'duration must be more than one minute');
         _escrow(_nftAddress, _seller, _tokenId);
         Auction memory _auction = Auction(
             payable(_seller),
@@ -205,27 +207,10 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
     /// @param _nftAddress - Address of the NFT.
     /// @param _tokenId - ID of token on auction
     function cancelAuction(address _nftAddress, uint256 _tokenId) external {
+        require(_nftAddress != address(0),'nftAddress is a Zero address');
         Auction memory _auction = auctions[_nftAddress][_tokenId];
-        require(_isOnAuction(_auction));
-        require(msg.sender == _auction.seller);
-        _cancelAuction(_nftAddress, _tokenId, _auction.seller);
-    }
-    
-    /// @dev Cancels an auction when the contract is paused.
-    ///  Only the owner may do this, and NFTs are returned to
-    ///  the seller. This should only be used in emergencies.
-    /// @param _nftAddress - Address of the NFT.
-    /// @param _tokenId - ID of the NFT on auction to cancel.
-    function cancelAuctionWhenPaused(
-        address _nftAddress,
-        uint256 _tokenId
-    )
-    external
-    whenPaused
-    onlyOwner
-    {
-        Auction memory _auction = auctions[_nftAddress][_tokenId];
-        require(_isOnAuction(_auction));
+        require(_isOnAuction(_auction),'this auction has been bided');
+        require(msg.sender == _auction.seller,'caller is not owner');
         _cancelAuction(_nftAddress, _tokenId, _auction.seller);
     }
     
