@@ -3,17 +3,15 @@ pragma solidity =0.8.0;
 
 
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../ERC721/lifecycle/HasNoEther.sol";
+import "../interface/MelioraInterface.sol";
 
 /// @title Clock auction for non-fungible tokens.
-contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
+contract MelioraAuction is Pausable, HasNoEther {
     
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     
     using SafeERC20 for IERC20;
     
@@ -36,7 +34,13 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
     // Values 0-10,000 map to 0%-100%
     uint256 public ownerCut;
     
-    address public payTokenAddress = 0xd66c6B4F0be8CE5b39D52E0Fd1344c389929B378;
+    //
+    address public payTokenAddress = 0x2170Ed0880ac9A755fd29B2688956BD959F933F8;
+    
+    //Quantity per pre-sale
+    uint64 public saleCount;
+    
+    uint256 public salePrice;
 
     // Map from token ID to their corresponding auction.
     mapping (address => mapping (uint256 => Auction)) public auctions;
@@ -71,6 +75,18 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
         uint256 indexed _tokenId
     );
     
+    event PreSale(
+        address indexed _nftAddress,
+        address indexed account,
+        uint256 indexed _tokenId,
+        uint256 _salePrice,
+        uint64 _saleCount
+    );
+    
+    event PreSaleCount(
+        uint64 _saleCount
+    );
+    
     /// @dev Constructor creates a reference to the NFT ownership contract
     ///  and verifies the owner cut is in the valid range.
     /// @param _ownerCut - percent cut the owner takes on each auction, must be
@@ -94,6 +110,13 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
         _;
     }
   
+    function setSaleCountAndPrice(uint64 _saleCount,uint256 _salePrice) external onlyOwner{
+        require(saleCount==0 && _saleCount>0,'saleCount must be more than 0');
+        require(_salePrice>0,'salePrice must be more than 0');
+        saleCount = _saleCount;
+        salePrice = _salePrice;
+        emit PreSaleCount(_saleCount);
+    }
 
   /// @dev Returns auction info for an NFT on auction.
   /// @param _nftAddress - Address of the NFT.
@@ -182,6 +205,22 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
         );
     }
     
+    function bidForVoid(
+        address _nftAddress
+    )
+        external
+        whenNotPaused
+    {
+        require(saleCount > 0,'end of Pre Sale');
+        require(_nftAddress != address(0),'zero address');
+        MelioraInterface melioraInterface = MelioraInterface(_nftAddress);
+        saleCount = saleCount - 1;
+        uint256 tokenId = melioraInterface._tokenIdCounter()+15001;
+        IERC20(payTokenAddress).safeTransferFrom(msg.sender,address(this),salePrice);
+        melioraInterface.birthVoidMeliora(msg.sender,tokenId);
+        emit PreSale(_nftAddress,msg.sender,tokenId,salePrice,saleCount);
+    }
+    
     /// @dev Bids on an open auction, completing the auction and transferring
     ///  ownership of the NFT if enough Ether is supplied.
     /// @param _nftAddress - address of a deployed contract implementing
@@ -192,9 +231,9 @@ contract MelioraAuction is Pausable, AccessControl, Ownable ,HasNoEther {
         uint256 _tokenId
     )
     external
-    payable
     whenNotPaused
     {
+        require(_nftAddress!=address(0),'nftAddress can not a Zero Address');
     // _bid will throw if the bid or funds transfer fails
         _bid(_nftAddress,_tokenId);
         _transfer(_nftAddress, msg.sender, _tokenId);

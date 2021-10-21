@@ -4,6 +4,7 @@ pragma solidity =0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 contract MeliToken is ERC20, ERC20Burnable, AccessControl, Pausable  {
@@ -17,6 +18,11 @@ contract MeliToken is ERC20, ERC20Burnable, AccessControl, Pausable  {
         _setupRole(PAUSER_ROLE, msg.sender);
         _mint(msg.sender, 1000000000 * 10 ** decimals());
     }
+    
+    modifier checkContract(address sender){
+        require(Address.isContract(sender) ,'caller is not a manager contract');
+        _;
+    }
 
     function pause() public onlyRole(PAUSER_ROLE) {
         _pause();
@@ -26,7 +32,11 @@ contract MeliToken is ERC20, ERC20Burnable, AccessControl, Pausable  {
         _unpause();
     }
     
-    function claimPayment(address account,uint256 amount,uint256 nonce) external onlyRole(MANAGER_ROLE){
+    function claimPayment(address account,uint256 amount,uint256 nonce) 
+        external 
+        checkContract(msg.sender)
+        onlyRole(MANAGER_ROLE)
+    {
         _transfer(address(this),account,amount);
         emit Withdraw(account,amount,nonce);
     }

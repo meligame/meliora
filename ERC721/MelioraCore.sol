@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
@@ -22,8 +23,6 @@ contract MelioraCore is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnab
     
     string public tokenURISuffix = "/meliora.json";
     
-    bool public canCreateVoidMeliora = true;
-    
     bool public transferAllow = false;
 
     constructor() ERC721("Meliora", "MELIORA") {
@@ -34,12 +33,6 @@ contract MelioraCore is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnab
     event MelioraBirth(address indexed owner,uint256 fatherId,uint256 motherId,uint256 indexed tokenId,uint256 birth,uint256 rebirth);
     
     event MelioraUpGrade(uint256 upId,uint256 burnId,uint8 currentStar);
-     
-    
-    modifier checkVoidMeliora{
-        require(canCreateVoidMeliora,'can not create void meliora');
-        _;
-    }
     
     modifier checkTransfer(address account){
         require(transferAllow ||
@@ -48,14 +41,8 @@ contract MelioraCore is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnab
     }
     
     modifier checkContract(address sender){
-        require(isContract(sender) ,'caller is not a manager contract');
+        require(Address.isContract(sender) ,'caller is not a manager contract');
         _;
-    }
-    
-    function isContract(address addr) internal view returns (bool) {
-       uint size;
-       assembly { size := extcodesize(addr) }
-       return size > 0;
     }
     
     function setTokenURIPrefix(string memory _tokenURIPrefix)external onlyRole(DEFAULT_ADMIN_ROLE){
@@ -73,31 +60,44 @@ contract MelioraCore is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnab
     function unpause() external onlyRole(PAUSER_ROLE) {
         _unpause();
     }
-    
-    function closeVoidMeliora() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        canCreateVoidMeliora = false;
-    }
-    
+  
     function transferAllowed(bool _allowd) external onlyRole(DEFAULT_ADMIN_ROLE){
         transferAllow = _allowd;
     }
     
-    function createVoidMeliora(address owner,uint tokenId) external checkVoidMeliora onlyRole(MANAGER_ROLE){
+    function birthVoidMeliora(address owner,uint tokenId) 
+        external 
+        
+        checkContract(msg.sender) 
+        
+        onlyRole(MANAGER_ROLE)
+    {
         _birthMeliora(owner,tokenId);
     }
     
-    function birthMeliora(address owner,uint fatherId,uint motherId,uint tokenId,uint birth,uint rebirth)  external checkContract(msg.sender)  onlyRole(MANAGER_ROLE){
+    function birthMeliora(address owner,uint fatherId,uint motherId,uint tokenId,uint birth,uint rebirth)  
+        external 
+    
+        checkContract(msg.sender) 
+    
+        onlyRole(MANAGER_ROLE)
+    {
         _birthMeliora(owner,tokenId);
         emit MelioraBirth(owner,fatherId,motherId,tokenId,birth,rebirth);
     }
     
-    function _birthMeliora(address owner,uint tokenId) internal{
+    function _birthMeliora(address owner,uint tokenId) 
+        internal
+    {
         _mint(owner,tokenId);
         _setTokenURI(tokenId,caluteTokenURI(tokenId,0));
         _tokenIdCounter.increment();
     }
     
-    function upGradeMeliora(uint256 upTokenId,uint256 burnId,uint8 star) external onlyRole(MANAGER_ROLE) {
+    function upGradeMeliora(uint256 upTokenId,uint256 burnId,uint8 star) 
+        external 
+        onlyRole(MANAGER_ROLE)
+    {
         _setTokenURI(upTokenId,caluteTokenURI(upTokenId,star));
         _burn(burnId);
         emit MelioraUpGrade(upTokenId,burnId,star);
@@ -137,30 +137,29 @@ contract MelioraCore is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnab
     }
     
     function caluteTokenURI (uint256 _tokenId,uint8 _star) internal view returns(string memory){
-        string memory tokenId = uint2str(_tokenId);
-        string memory star = uint2str(_star);
+        string memory tokenId = toString(_tokenId);
+        string memory star = toString(_star);
         string memory uri = append(tokenId,star);
         return uri;
     }
     
-    function uint2str( uint256 _i ) internal pure returns (string memory str) {
-      if (_i == 0) {
-        return "0";
-      }
-      uint256 j = _i;
-      uint256 length;
-      while (j != 0) {
-        length++;
-        j /= 10;
-      }
-      bytes memory bstr = new bytes(length);
-      uint256 k = length;
-      j = _i;
-      while (j != 0){
-        bstr[--k] = bytes1(uint8(48 + j % 10));
-        j /= 10;
-      }
-      str = string(bstr);
+    function toString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
   
     function append(string memory tokenId,string memory star) internal view returns (string memory) {
