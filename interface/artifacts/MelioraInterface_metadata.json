@@ -1,0 +1,157 @@
+{
+	"compiler": {
+		"version": "0.8.0+commit.c7dfd78e"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [],
+				"name": "_tokenIdCounter",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "fatherId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "motherId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "tokenId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "birth",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rebirth",
+						"type": "uint256"
+					}
+				],
+				"name": "birthMeliora",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "tokenId",
+						"type": "uint256"
+					}
+				],
+				"name": "birthVoidMeliora",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "tokenId",
+						"type": "uint256"
+					}
+				],
+				"name": "ownerOf",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "upTokenId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "burnTokenId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint8",
+						"name": "star",
+						"type": "uint8"
+					}
+				],
+				"name": "upGradeMeliora",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/interface/MelioraInterface.sol": "MelioraInterface"
+		},
+		"evmVersion": "istanbul",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"contracts/interface/MelioraInterface.sol": {
+			"keccak256": "0x339d6ae61400873c0a8022994ae0aca173020c1e6c38252d4a9d6b19a21b902e",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://c4fc26048506df43f070862369a9e32c32ee2ff8363c92b956be05a12864e9c1",
+				"dweb:/ipfs/QmdrubATjA8HHKHyoQemFf9vhcYDfzSmbzQiCYV1THX2w9"
+			]
+		}
+	},
+	"version": 1
+}

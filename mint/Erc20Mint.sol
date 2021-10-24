@@ -4,7 +4,7 @@ pragma solidity =0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../ERC721/lifecycle/HasNoEther.sol";
+import "../lifecycle/HasNoEther.sol";
 
 contract Erc20Mint is HasNoEther{
     
@@ -33,7 +33,7 @@ contract Erc20Mint is HasNoEther{
     
     using SafeMath for uint256;
     
-    uint256 period = 10 hours;
+    uint256 period = 20 days;
     
     address public nftAddress; //escrow nftAddress
     address public profitToken;
@@ -51,7 +51,7 @@ contract Erc20Mint is HasNoEther{
 
     
     function getHoursId(uint256 current) internal pure returns(uint256) {
-        return current/30/60;
+        return current/3600;
     }
 	
     function _updateHourArray(uint256 currentHoursId) internal {
@@ -64,7 +64,7 @@ contract Erc20Mint is HasNoEther{
 
     function deposit(uint256 tokenId) external{
         uint256 current = getHoursId(block.timestamp);
-        require(current > startHourId,'claim is not begin');
+        require(current >= startHourId,'claim is not begin');
         require(current < endHourId,'claim has been end');
         require(IERC721(nftAddress).ownerOf(tokenId) == msg.sender,'TOKENID_INVALID');
         IERC721(nftAddress).transferFrom(msg.sender,address(this),tokenId);
