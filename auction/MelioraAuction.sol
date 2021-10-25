@@ -7,16 +7,21 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../lifecycle/HasNoEther.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "../interface/MelioraInterface.sol";
 
 /// @title Clock auction for non-fungible tokens.
 contract MelioraAuction is Pausable, HasNoEther {
     
+    using Counters for Counters.Counter;
+
+    Counters.Counter public _orderIdCounter;
     
     using SafeERC20 for IERC20;
     
     // Represents an auction on an NFT
     struct Auction {
+        uint256 orderId;
         // Current owner of NFT
         address payable seller;
         // Price (in wei) at beginning of auction
@@ -44,7 +49,7 @@ contract MelioraAuction is Pausable, HasNoEther {
 
     // Map from token ID to their corresponding auction.
     mapping (address => mapping (uint256 => Auction)) public auctions;
-    
+    //Map from orderId to auction
     
     function pause() public onlyOwner {
         _pause();
@@ -60,33 +65,23 @@ contract MelioraAuction is Pausable, HasNoEther {
         uint256 _startingPrice,
         uint256 _endingPrice,
         uint256 _duration,
-        address _seller
+        address _seller,
+        uint256 _orderId
     );
     
     event AuctionSuccessful(
         address indexed _nftAddress,
         uint256 indexed _tokenId,
         uint256 _totalPrice,
-        address _winner
+        address _winner,
+        uint256 orderId
     );
     
     event AuctionCancelled(
         address indexed _nftAddress,
         uint256 indexed _tokenId
     );
-    
-    event PreSale(
-        address indexed _nftAddress,
-        address indexed account,
-        uint256 indexed _tokenId,
-        uint256 _salePrice,
-        uint64 _saleCount
-    );
-    
-    event PreSaleCount(
-        uint64 _saleCount
-    );
-    
+
     /// @dev Constructor creates a reference to the NFT ownership contract
     ///  and verifies the owner cut is in the valid range.
     /// @param _ownerCut - percent cut the owner takes on each auction, must be
@@ -108,59 +103,6 @@ contract MelioraAuction is Pausable, HasNoEther {
     modifier canBeStoredWith128Bits(uint256 _value) {
         require(_value < 340282366920938463463374607431768211455,'value is error');
         _;
-    }
-  
-    function setSaleCountAndPrice(uint64 _saleCount,uint256 _salePrice) external onlyOwner{
-        require(saleCount==0 && _saleCount>0,'saleCount must be more than 0');
-        require(_salePrice>0,'salePrice must be more than 0');
-        saleCount = _saleCount;
-        salePrice = _salePrice;
-        emit PreSaleCount(_saleCount);
-    }
-
-  /// @dev Returns auction info for an NFT on auction.
-  /// @param _nftAddress - Address of the NFT.
-  /// @param _tokenId - ID of NFT on auction.
-    function getAuction(
-        address _nftAddress,
-        uint256 _tokenId
-    )
-    external
-    view
-    returns (
-        address seller,
-        uint256 startingPrice,
-        uint256 endingPrice,
-        uint256 duration,
-        uint256 startedAt
-    )
-    {
-        require(_nftAddress != address(0),'nftAddress can not is a Zero address');
-        Auction memory _auction = auctions[_nftAddress][_tokenId];
-        require(_isOnAuction(_auction),'this auction has been bided');
-        return (
-            _auction.seller,
-            _auction.startingPrice,
-            _auction.endingPrice,
-            _auction.duration,
-            _auction.startedAt
-        );
-    }
-    
-    /// @dev Returns the current price of an auction.
-    /// @param _nftAddress - Address of the NFT.
-    /// @param _tokenId - ID of the token price we are checking.
-    function getCurrentPrice(
-        address _nftAddress,
-        uint256 _tokenId
-    )
-    external
-    view
-    returns (uint256)
-    {
-        Auction memory _auction = auctions[_nftAddress][_tokenId];
-        require(_isOnAuction(_auction),'this auction has been bided');
-        return _getCurrentPrice(_auction);
     }
     
     /// @dev Creates and begins a new auction.
@@ -185,12 +127,16 @@ contract MelioraAuction is Pausable, HasNoEther {
     canBeStoredWith64Bits(_duration)
     {
         address _seller = msg.sender;
+        require(_checkPrice(_startingPrice,_endingPrice),'span is too large');
         require(_nftAddress != address(0),'nftAddress is a Zero address');
-        require(_startingPrice>0&&_endingPrice>0,'price error');
+        require(_startingPrice>0 && _endingPrice>0,'price error');
         require(_owns(_nftAddress, _seller, _tokenId),'caller is not owner');
         require(_duration >= 1 minutes,'duration must be more than one minute');
         _escrow(_nftAddress, _seller, _tokenId);
+        uint256 orderId = _orderIdCounter.current();
+        _orderIdCounter.increment();
         Auction memory _auction = Auction(
+            orderId,
             payable(_seller),
             uint128(_startingPrice),
             uint128(_endingPrice),
@@ -201,24 +147,19 @@ contract MelioraAuction is Pausable, HasNoEther {
             _nftAddress,
             _tokenId,
             _auction,
-            _seller
+            _seller,
+            orderId
         );
+        
     }
-    
-    function bidForVoid(
-        address _nftAddress
-    )
-        external
-        whenNotPaused
-    {
-        require(saleCount > 0,'end of Pre Sale');
-        require(_nftAddress != address(0),'zero address');
-        MelioraInterface melioraInterface = MelioraInterface(_nftAddress);
-        saleCount = saleCount - 1;
-        uint256 tokenId = melioraInterface._tokenIdCounter()+15001;
-        IERC20(payTokenAddress).safeTransferFrom(msg.sender,address(this),salePrice);
-        melioraInterface.birthVoidMeliora(msg.sender,tokenId);
-        emit PreSale(_nftAddress,msg.sender,tokenId,salePrice,saleCount);
+
+
+    function _checkPrice( uint256 _startingPrice,uint256 _endingPrice) internal pure returns(bool){
+        uint cut = 0 ;
+        if(_endingPrice > _startingPrice ){
+            cut = _endingPrice/_startingPrice;
+        }
+        return (cut < 2);
     }
     
     /// @dev Bids on an open auction, completing the auction and transferring
@@ -228,14 +169,16 @@ contract MelioraAuction is Pausable, HasNoEther {
     /// @param _tokenId - ID of token to bid on.
     function bid(
         address _nftAddress,
-        uint256 _tokenId
+        uint256 _tokenId,
+        uint256 _orderId,
+        uint256 _amount
     )
     external
     whenNotPaused
     {
         require(_nftAddress!=address(0),'nftAddress can not a Zero Address');
-    // _bid will throw if the bid or funds transfer fails
-        _bid(_nftAddress,_tokenId);
+        // _bid will throw if the bid or funds transfer fails
+        _bid(_nftAddress,_tokenId,_orderId,_amount);
         _transfer(_nftAddress, msg.sender, _tokenId);
     }
     
@@ -245,18 +188,18 @@ contract MelioraAuction is Pausable, HasNoEther {
     ///  be called while the contract is paused.
     /// @param _nftAddress - Address of the NFT.
     /// @param _tokenId - ID of token on auction
-    function cancelAuction(address _nftAddress, uint256 _tokenId) external {
+    function cancelAuction(address _nftAddress, uint256 _tokenId,uint _orderId) external {
         require(_nftAddress != address(0),'nftAddress is a Zero address');
         Auction memory _auction = auctions[_nftAddress][_tokenId];
-        require(_isOnAuction(_auction),'this auction has been bided');
+        require(_validAuction(_orderId,_auction),'this auction has been bided');
         require(msg.sender == _auction.seller,'caller is not owner');
         _cancelAuction(_nftAddress, _tokenId, _auction.seller);
     }
     
     /// @dev Returns true if the NFT is on auction.
     /// @param _auction - Auction to check.
-    function _isOnAuction(Auction memory _auction) internal pure returns (bool) {
-        return (_auction.startedAt > 0);
+    function _validAuction(uint256 _orderId,Auction memory _auction) internal pure returns (bool) {
+        return (_auction.startedAt > 0 && _auction.orderId == _orderId);
     }
     
     /// @dev Returns current price of an NFT on auction. Broken into two
@@ -344,10 +287,12 @@ contract MelioraAuction is Pausable, HasNoEther {
         address _nftAddress,
         uint256 _tokenId,
         Auction memory _auction,
-        address _seller
+        address _seller,
+        uint256 orderId
     )
     internal
     {
+       
         auctions[_nftAddress][_tokenId] = _auction;
         emit AuctionCreated(
             _nftAddress,
@@ -355,7 +300,8 @@ contract MelioraAuction is Pausable, HasNoEther {
             uint256(_auction.startingPrice),
             uint256(_auction.endingPrice),
             uint256(_auction.duration),
-            _seller
+            _seller,
+            orderId
         );
     }
     
@@ -406,14 +352,17 @@ contract MelioraAuction is Pausable, HasNoEther {
     /// Does NOT transfer ownership of token.
     function _bid(
         address _nftAddress,
-        uint256 _tokenId
+        uint256 _tokenId,
+        uint256 _orderId,
+        uint256 _amount
     )
     internal
     returns (uint256)
     {
         Auction memory _auction = auctions[_nftAddress][_tokenId];
-        require(_isOnAuction(_auction));
+        require(_validAuction(_orderId,_auction),'invalid auction');
         uint256 _price = _getCurrentPrice(_auction);
+        require(_amount >= _price,'_price error');
         address payable _seller = _auction.seller;
         _removeAuction(_nftAddress, _tokenId);
         if (_price > 0) {
@@ -426,7 +375,8 @@ contract MelioraAuction is Pausable, HasNoEther {
             _nftAddress,
             _tokenId,
             _price,
-            msg.sender
+            msg.sender,
+            _orderId
         );
         return _price;
     }
